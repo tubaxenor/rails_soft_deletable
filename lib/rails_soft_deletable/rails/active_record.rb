@@ -1,5 +1,6 @@
 require "rails_soft_deletable/query"
 require "rails_soft_deletable/callbacks"
+require "rails_soft_deletable/associations"
 
 module RailsSoftDeletable
   module ActiveRecord
@@ -19,6 +20,7 @@ module RailsSoftDeletable
       def soft_deletable(options={})
         include RailsSoftDeletable::Query
         include RailsSoftDeletable::Callbacks
+        include RailsSoftDeletable::Associations
 
         class_attribute :soft_deletable_column
 
