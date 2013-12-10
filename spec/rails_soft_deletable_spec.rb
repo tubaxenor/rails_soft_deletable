@@ -22,6 +22,89 @@ describe RailsSoftDeletable do
     end
   end
 
+  context "with associations" do
+    context ".belongs_to" do
+      context "with deleted option" do
+        before do
+          @forest = Forest.create!
+          @forest.destroy
+          @tree = Tree.create!(forest_id: @forest.id)
+        end
+
+        it "returns associated objects" do
+          expect(@tree.forest).to eq(@forest)
+        end
+      end
+
+      context "without deleted option" do
+        before do
+          @park = Park.create!
+          @park.destroy
+          @tree = Tree.create!(park_id: @park.id)
+        end
+
+        it "does not return deleted associated objects" do
+          expect(@tree.park).to be_nil
+        end
+      end
+    end
+
+    context ".has_many" do
+      context "with deleted option" do
+        before do
+          @forest = Forest.create!
+          @tree_destroyed = Tree.create!(forest_id: @forest.id)
+          @tree_destroyed.destroy
+          @tree = Tree.create!(forest_id: @forest.id)
+        end
+
+        it "returns all associated objects" do
+          expect(@forest.trees).to eq([@tree_destroyed, @tree])
+        end
+      end
+
+      context "without deleted option" do
+        before do
+          @park = Park.create!
+          @tree_destroyed = Tree.create!(park_id: @park.id)
+          @tree_destroyed.destroy
+          @tree = Tree.create!(park_id: @park.id)
+        end
+
+        it "returns not deleted object" do
+          expect(@park.trees).to eq([@tree])
+        end
+      end
+    end
+
+    context ".has_one" do
+      context "with deleted option" do
+        before do
+          @forest = Forest.create!
+          @keeper_destroyed = Keeper.create!(forest_id: @forest.id)
+          @keeper_destroyed.destroy
+        end
+
+        it "returns deleted object" do
+          expect(@forest.keeper).to eq(@keeper_destroyed)
+        end
+      end
+
+      context "without deleted option" do
+        before do
+          @park = Park.create!
+          @keeper_destroyed = Keeper.create!(park_id: @park.id)
+          @keeper_destroyed.destroy
+          @keeper = Keeper.create!(park_id: @park.id)
+        end
+
+        it "returns object with no deleted_at" do
+          expect(@park.keeper).to eq(@keeper)
+        end
+      end
+    end
+  end
+
   context "#destroy" do
     it "marks deleted_at column" do
       Timecop.freeze(Time.now) do
@@ -37,14 +120,14 @@ describe RailsSoftDeletable do
     end
 
     it "soft deletes the record" do
-      Timecop.freeze(Time.now) do
+      Timecop.freeze(Time.now.round) do
         decimal_model.destroy
         integer_model.destroy
 
         expect(decimal_model.deleted_at).to eq(("%0.6f" % Time.now.to_f).to_f)
         expect(integer_model.deleted_at).to eq(Time.now.to_i)
 
-        expect(decimal_model.soft_delete_time).to eq(Time.now)
+        expect(decimal_model.soft_delete_time).to eq(Time.now.in_time_zone)
         expect(integer_model.soft_delete_time.to_i).to eq(Time.now.to_i)
       end
     end
@@ -136,14 +219,14 @@ describe RailsSoftDeletable do
     end
 
     it "soft deletes the record" do
-      Timecop.freeze(Time.now) do
+      Timecop.freeze(Time.now.round) do
         decimal_model.delete
         integer_model.delete
 
         expect(decimal_model.deleted_at).to eq(("%0.6f" % Time.now.to_f).to_f)
         expect(integer_model.deleted_at.to_i).to eq(Time.now.to_i)
 
-        expect(decimal_model.soft_delete_time).to eq(Time.now)
+        expect(decimal_model.soft_delete_time).to eq(Time.now.in_time_zone)
         expect(integer_model.soft_delete_time.to_i).to eq(Time.now.to_i)
       end
     end
